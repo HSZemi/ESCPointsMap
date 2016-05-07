@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Leaflet GeoJSON Example</title>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="http://cdn.leafletjs.com/leaflet-0.7.1/leaflet.css" />
+    <style type="text/css">
+        .leaflet-container{background-color:#c5e8ff;}
+	body{margin:0em;}
+	#besideMouse{font-family: sans-serif; background-color: #ddd;}
+	.controls{
+		border: 1px solid white;
+		background-color: white;
+		border-radius: 3px;
+	}
+	.controls fieldset{
+		border: none;
+	}
+	.legend  {
+		width: 100%;
+		text-align: center;
+	}
+	.legend.receiving {
+		background-color: #0c0;
+		color: white;
+		font-weight: bold;
+	}
+	.legend.giving {
+		background-color: #c00;
+		color: white;
+		font-weight: bold;
+	}
+    </style>
+</head>
+
+<body>
+    <div id="map" style="width: 100%; height: 100vh;"></div>
+    <div style="z-index:10; position:fixed;" id="besideMouse"></div>
+
+    <script src="http://code.jquery.com/jquery-1.10.2.min.js"></script>
+    <script src="http://cdn.leafletjs.com/leaflet-0.7.1/leaflet.js"></script>
+    <script>
+    var map, geojson, currentname="", current_dataset = null;
+    var data_all_from, data_televote_from, data_5050_from, data_all_to, data_televote_to, data_5050_to, data_geojson;
+    
+    var myCustomStyle = {
+	stroke: true,
+	weight: 1,
+	color: '#000',
+	fill: true,
+	fillColor: '#fff',
+	fillOpacity: 1
+    };
+    
+    $(document).ready(function () {
+		collect_data();
+    });
+    
+    function collect_data(){
+	$.when(
+		$.getJSON('data/custom.geo.json',function(data){
+			data_geojson = data;
+			console.log('data/custom.geo.json');
+		}),
+		$.getJSON('data/data_all_from.json',function(data){
+			data_all_from = data;
+			console.log('data/data_all_from.json');
+		}),
+		$.getJSON('data/data_all_to.json',function(data){
+			data_all_to = data;
+			console.log('data/data_all_to.json');
+		}),
+		$.getJSON('data/data_televote_from.json',function(data){
+			data_televote_from = data;
+			console.log('data/data_televote_from.json');
+		}),
+		$.getJSON('data/data_televote_to.json',function(data){
+			data_televote_to = data;
+			console.log('data/data_televote_to.json');
+		}),
+		$.getJSON('data/data_5050_from.json',function(data){
+			data_5050_from = data;
+			console.log('data/data_5050_from.json');
+		}),
+		$.getJSON('data/data_5050_to.json',function(data){
+			data_5050_to = data;
+			console.log('data/data_5050_to.json');
+		})
+	).then(function(){
+			init_map();
+			init_geojson("");
+		}
+	);
+    }
+    
+    function update_current_dataset(){
+	current_dataset = data_all_to;
+	if($('#pr').prop("checked")){
+		if($('#tv').prop("checked")){
+			current_dataset = data_televote_to;
+		}
+		if($('#tvjur').prop("checked")){
+			current_dataset = data_5050_to;
+		}
+		if($('#tv').prop("checked") && $('#tvjur').prop("checked")){
+			current_dataset = data_all_to;
+		}
+	}
+	if($('#pg').prop("checked")){
+		current_dataset = data_all_from;
+		if($('#tv').prop("checked")){
+			current_dataset = data_televote_from;
+		}
+		if($('#tvjur').prop("checked")){
+			current_dataset = data_5050_from;
+		}
+		if($('#tv').prop("checked") && $('#tvjur').prop("checked")){
+			current_dataset = data_all_from;
+		}
+	}
+    }
+    
+    function init_map(){	
+	map = L.map('map').setView([39.74739, 0], 4);
+
+	geojson = L.geoJson(data_geojson, {
+		clickable: true,
+		onEachFeature: onEachFeature,
+		style: myCustomStyle
+	}).addTo(map);
+           
+           
+	var legend = L.control({position: 'topright'});
+	legend.onAdd = function (map) {
+		var div = L.DomUtil.create('div', 'controls');
+		div.innerHTML += '<fieldset> <input type="radio" id="pr" name="method" value="Points received" checked><label for="pr"> Points received</label><br> <input type="radio" id="pg" name="method" value="Points given"><label for="pg"> Points given</label> </fieldset><div class="legend receiving">Receiving points</div><div class="legend giving">Giving points</div><div class="legend">darker = more points</div><fieldset> <input type="checkbox" id="tv" name="voting" value="Televoting" checked><label for="tv"> 2003-2009sf</label><br> <input type="checkbox" id="tvjur" name="voting" value="Televote/Jury"><label for="tvjur"> 2009f-2015</label> </fieldset>';
+
+		return div;
+	};
+
+	legend.addTo(map);
+	
+	$('#pr').click(function(){init_geojson(currentname);});
+	$('#pg').click(function(){init_geojson(currentname);});
+	$('#tv').click(function(){init_geojson(currentname);});
+	$('#tvjur').click(function(){init_geojson(currentname);});
+    }
+    
+    function init_geojson(n){
+	update_current_dataset();
+	map.removeLayer(geojson);
+	currentname = map2esc(n);
+	geojson = L.geoJson(data_geojson, {
+		clickable: true,
+		onEachFeature: onEachFeature,
+		style: style
+	}).addTo(map);
+    }
+    
+    function style(feature){
+	var name = map2esc(feature.properties.name);
+	
+	if(name in data_all_from){ // country is a esc country (we have to check data_from here!)
+		if(currentname == name){
+			fillcolor = '#111';
+			if($('#pr').prop("checked")){
+				fillcolor = '#0c0';
+			} else if($('#pg').prop("checked")){
+				fillcolor = '#c00';
+			}
+			return {
+				stroke: true,
+				weight: 1,
+				color: '#000',
+				fill: true,
+				fillColor: fillcolor,
+				fillOpacity: 1
+			};
+		} else if(currentname in current_dataset && name in current_dataset[currentname]){
+			max = 0;
+			for(key in current_dataset[currentname]){
+				max = Math.max(current_dataset[currentname][key], max);
+			}
+			
+			fillcolor = '#000';
+			if($('#pr').prop("checked")){
+				fillcolor = 'rgb(255,'+(255-Math.floor(current_dataset[currentname][name] / max * 255))+','+(255-Math.floor(current_dataset[currentname][name] / max * 255))+')';
+			} else if($('#pg').prop("checked")){
+				fillcolor = 'rgb('+(255-Math.floor(current_dataset[currentname][name] / max * 255))+',255,'+(255-Math.floor(current_dataset[currentname][name] / max * 255))+')';
+			}
+			
+			return {
+				stroke: true,
+				weight: 1,
+				color: '#000',
+				fill: true,
+				fillColor: fillcolor,
+				fillOpacity: 1
+			};
+		} else { 
+			return {
+				stroke: true,
+				weight: 1,
+				color: '#000',
+				fill: true,
+				fillColor: '#ddd',
+				fillOpacity: 1
+			};
+		}
+	} else { //not a esc country
+		return {
+			stroke: true,
+			weight: 1,
+			color: '#000',
+			fill: true,
+			fillColor: '#aaa',
+			fillOpacity: 1
+		};
+	}
+    }
+
+	
+    var onEachFeature = function(feature, layer){
+	layer.on('mouseover', function(e){
+		var name = map2esc(feature.properties.name);
+		var text = name;
+		if(current_dataset != null && currentname != ""){
+			if(currentname in current_dataset && name in current_dataset[currentname]){
+				text += " ("+current_dataset[currentname][name] + ')';
+			}
+		}
+		$('#besideMouse').text(text);
+	});
+	layer.on('mouseout', function(e){
+		$('#besideMouse').text('');
+	});
+	layer.on('click', function(e){
+		init_geojson(feature.properties.name);
+	});
+    }
+
+	
+    $(document).mousemove(function(e){
+	var cpos = { top: e.pageY + 10, left: e.pageX + 10 };
+	$('#besideMouse').offset(cpos);
+    });
+    
+    function map2esc(mapname){
+	switch(mapname){
+		case 'Czech Rep.':
+			return 'Czech Republic';
+		case 'Bosnia and Herz.':
+			return 'Bosnia and Herzegovina';
+	}
+	
+	return mapname;
+    
+    }
+    
+    function esc2map(escname){
+	switch(mapname){
+		case 'Czech Republic':
+			return 'Czech Rep.';
+		case 'Bosnia and Herzegovina':
+			return 'Bosnia and Herz.';
+		case 'Serbia and Montenegro':
+			return ['Serbia', 'Montenegro'];
+	}
+    }
+    </script>
+</body>
+</html>
