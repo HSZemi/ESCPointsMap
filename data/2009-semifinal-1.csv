@@ -1,19 +1,19 @@
-To	Total Score	Montenegro	Czech Republic	Belgium	Belarus	Sweden	Armenia	Andorra	Switzerland	Turkey	Israel	Bulgaria	Iceland	Macedonia	Romania	Finland	Portugal	Malta	Bosnia and Herzegovina	Germany	United Kingdom
-Montenegro	44				3		5	1	2	5	1			8			1	6	10	2	
-Czech Republic	0																				
-Belgium	1						1														
-Belarus	25	2	1			1	4				4	1	1	6		4		1			
-Sweden	105		6	4	7		8	7	4	4	7		10	3	4	10	8	8	4	4	7
-Armenia	99	4	12	10	10	5			1	10	10	8	2	2	8	1			1	10	5
-Andorra	8									1							4	3			
-Switzerland	15				2	2		2								5	2		2		
-Turkey	172	8	5	12	6	7	10	5	12		6	12	7	12	12	7	5	10	12	12	12
-Israel	75	5	4	3	4	6	7	8	5	3		4	6	1	3	6		4		5	1
-Bulgaria	7									2				5							
-Iceland	174	7	10	7	12	12	12	10	7	8	12	6		4	10	12	12	12	7	6	8
-Macedonia	45	10	3						6	6		10			2				8		
-Romania	67	6		2	1		2	4		7	8	5	4	7			10	2	6	1	2
-Finland	42	3		1		10		3					12		1		3	5			4
-Portugal	70		2	6		3		12	10		2	2	8		7	2			3	7	6
-Malta	86	1	7	8	8	4	3	6	3		5	3	5		6	3	6		5	3	10
-Bosnia and Herzegovina	125	12	8	5	5	8	6		8	12	3	7	3	10	5	8	7	7		8	3
+Participant	Andorra	Armenia	Belarus	Belgium	Bosnia & Herzegovina	Bulgaria	Czech Republic	F.Y.R. Macedonia	Finland	Germany	Iceland	Israel	Malta	Montenegro	Portugal	Romania	Sweden	Switzerland	Turkey	United Kingdom	Points	Place
+Montenegro	1	5	3		10			8		2		1	6		1			2	5		44	11
+Czech Republic																					-	18
+Belgium		1																			1	17
+Belarus		4				1	1	6	4		1	4	1	2			1				25	13
+Sweden	7	8	7	4	4		6	3	10	4	10	7	8		8	4		4	4	7	105	4
+Armenia			10	10	1	8	12	2	1	10	2	10		4		8	5	1	10	5	99	5
+Andorra													3		4				1		8	15
+Switzerland	2		2		2				5						2		2				15	14
+Turkey	5	10	6	12	12	12	5	12	7	12	7	6	10	8	5	12	7	12		12	172	2
+Israel	8	7	4	3		4	4	1	6	5	6		4	5		3	6	5	3	1	75	7
+Bulgaria								5											2		7	16
+Iceland	10	12	12	7	7	6	10	4	12	6		12	12	7	12	10	12	7	8	8	174	1
+F.Y.R. Macedonia					8	10	3							10		2		6	6		45	10
+Romania	4	2	1	2	6	5		7		1	4	8	2	6	10				7	2	67	9
+Finland	3			1							12		5	3	3	1	10			4	42	12
+Portugal	12			6	3	2	2		2	7	8	2				7	3	10		6	70	8
+Malta	6	3	8	8	5	3	7		3	3	5	5		1	6	6	4	3		10	86	6
+Bosnia & Herzegovina		6	5	5		7	8	10	8	8	3	3	7	12	7	5	8	8	12	3	125	3

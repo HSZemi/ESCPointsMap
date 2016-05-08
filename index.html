@@ -1,9 +1,9 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Leaflet GeoJSON Example</title>
+    <title>ESC participating countries: Points received and points given</title>
     <meta charset="utf-8" />
-    <link rel="stylesheet" href="http://cdn.leafletjs.com/leaflet-0.7.1/leaflet.css" />
+    <link rel="stylesheet" href="css/leaflet.css" />
     <style type="text/css">
         .leaflet-container{background-color:#c5e8ff;}
 	body{margin:0em;}
@@ -40,11 +40,12 @@
     <div id="map" style="width: 100%; height: 100vh;"></div>
     <div style="z-index:10; position:fixed;" id="besideMouse"></div>
 
-    <script src="http://code.jquery.com/jquery-1.10.2.min.js"></script>
-    <script src="http://cdn.leafletjs.com/leaflet-0.7.1/leaflet.js"></script>
+    <script src="js/jquery.min.js"></script>
+    <script src="js/leaflet.js"></script>
     <script>
     var map, geojson, current_name="", current_dataset = null, current_method = 'from';
-    var data_all, data_televote, data_5050, data_all_final, data_televote_final, data_5050_final, data_geojson;
+    var data_all, data_televote, data_5050, data_all_final, data_televote_final, data_5050_final, 
+	data_all_avg, data_televote_avg, data_5050_avg, data_all_final_avg, data_televote_final_avg, data_5050_final_avg, data_geojson;
     
     var myCustomStyle = {
 	stroke: true,
@@ -54,6 +55,85 @@
 	fillColor: '#fff',
 	fillOpacity: 1
     };
+    
+    function decodeHash(hash){
+	var items = hash.substring(1).split("|");
+	if(items.length == 5){
+		current_name = items[0];
+		var prpg = parseInt(items[1]);
+		var sumavg = parseInt(items[2]);
+		var time = parseInt(items[3]);
+		var finalonly = parseInt(items[4]);
+		
+		switch(prpg){
+			case 0:
+				$('#pr').prop("checked", true);
+				break;
+			case 1:
+				$('#pg').prop("checked", true);
+				break;
+		}
+		switch(sumavg){
+			case 0:
+				$('#sum').prop("checked", true);
+				break;
+			case 1:
+				$('#avg').prop("checked", true);
+				break;
+		}
+		switch(time){
+			case 0:
+				$('#full').prop("checked", true);
+				break;
+			case 1:
+				$('#tv').prop("checked", true);
+				break;
+			case 2:
+				$('#tvjur').prop("checked", true);
+				break;
+		}
+		if(finalonly == 1){
+			$('#finalonly').prop("checked", true);
+		} else {
+			$('#finalonly').prop("checked", false);
+		}
+		
+	}
+    }
+    
+    function updateHash(){
+	var prpg = 0;
+	var sumavg = 0;
+	var time = 0;
+	var finalonly = 0;
+	
+	if($('#pg').prop("checked")){
+		prpg = 1;
+	}
+	
+	if($('#avg').prop("checked")){
+		sumavg = 1;
+	}
+	
+	if($('#tv').prop("checked")){
+		time = 1;
+	}else if($('#tvjur').prop("checked")){
+		time = 2;
+	}
+	
+	if($('#finalonly').prop("checked")){
+		finalonly = 1;
+	}
+    
+	var hash = '#';
+	hash += current_name;
+	hash += '|' + prpg;
+	hash += '|' + sumavg;
+	hash += '|' + time;
+	hash += '|' + finalonly;
+	
+	window.location.hash = hash;
+    }
     
     $(document).ready(function () {
 		collect_data();
@@ -81,42 +161,89 @@
 		}),
 		$.getJSON('data/data_5050_final.json',function(data){
 			data_5050_final = data;
+		}),
+		$.getJSON('data/data_all_avg.json',function(data){
+			data_all_avg = data;
+		}),
+		$.getJSON('data/data_all_final_avg.json',function(data){
+			data_all_final_avg = data;
+		}),
+		$.getJSON('data/data_televote_avg.json',function(data){
+			data_televote_avg = data;
+		}),
+		$.getJSON('data/data_televote_final_avg.json',function(data){
+			data_televote_final_avg = data;
+		}),
+		$.getJSON('data/data_5050_avg.json',function(data){
+			data_5050_avg = data;
+		}),
+		$.getJSON('data/data_5050_final_avg.json',function(data){
+			data_5050_final_avg = data;
 		})
 	).then(function(){
 			init_map();
-			init_geojson("");
+			if(window.location.hash != ""){
+				decodeHash(window.location.hash);
+			}
+			init_geojson(current_name);
+			
 		}
 	);
     }
     
     function update_current_dataset(){
+	updateHash();
 	current_dataset = data_all;
+	if($('#full').prop("checked")){
+		if($('#finalonly').prop("checked")){
+			if($('#sum').prop("checked")){
+				current_dataset = data_all_final;
+			} else {
+				current_dataset = data_all_final_avg;
+			}
+		} else {
+			if($('#sum').prop("checked")){
+				current_dataset = data_all;
+			} else {
+				current_dataset = data_all_avg;
+			}
+		}
+	}
 	if($('#tv').prop("checked")){
 		if($('#finalonly').prop("checked")){
-			current_dataset = data_televote_final;
+			if($('#sum').prop("checked")){
+				current_dataset = data_televote_final;
+			} else {
+				current_dataset = data_televote_final_avg;
+			}
 		} else {
-			current_dataset = data_televote;
+			if($('#sum').prop("checked")){
+				current_dataset = data_televote;
+			} else {
+				current_dataset = data_televote_avg;
+			}
 		}
 	}
 	if($('#tvjur').prop("checked")){
 		if($('#finalonly').prop("checked")){
-			current_dataset = data_5050_final;
+			if($('#sum').prop("checked")){
+				current_dataset = data_5050_final;
+			} else {
+				current_dataset = data_5050_final_avg;
+			}
 		} else {
-			current_dataset = data_5050;
-		}
-	}
-	if($('#tv').prop("checked") && $('#tvjur').prop("checked")){
-		if($('#finalonly').prop("checked")){
-			current_dataset = data_all_final;
-		} else {
-			current_dataset = data_all;
+			if($('#sum').prop("checked")){
+				current_dataset = data_5050;
+			} else {
+				current_dataset = data_5050_avg;
+			}
 		}
 	}
 
     }
     
     function init_map(){	
-	map = L.map('map').setView([39.74739, 0], 4);
+	map = L.map('map', {attributionControl: false}).setView([48.5, 18.6], 4);
 
 	geojson = L.geoJson(data_geojson, {
 		clickable: true,
@@ -128,7 +255,7 @@
 	var legend = L.control({position: 'topright'});
 	legend.onAdd = function (map) {
 		var div = L.DomUtil.create('div', 'controls');
-		div.innerHTML += '<fieldset> <input type="radio" id="pr" name="method" value="Points received" checked><label for="pr"> Points received</label><br> <input type="radio" id="pg" name="method" value="Points given"><label for="pg"> Points given</label> </fieldset><div class="legend receiving">Receiving points</div><div class="legend giving">Giving points</div><div class="legend">darker = more points</div><fieldset> <input type="checkbox" id="tv" name="voting" value="Televoting" checked><label for="tv"> 2003-2009sf</label><br> <input type="checkbox" id="tvjur" name="voting" value="Televote/Jury" checked><label for="tvjur"> 2009f-2015</label> <hr> <input type="checkbox" id="finalonly" name="types" value="finals only"><label for="finalonly"> finals only</label></fieldset>';
+		div.innerHTML += '<fieldset> <input type="radio" id="pr" name="method" value="Points received" checked><label for="pr"> Points received</label><br> <input type="radio" id="pg" name="method" value="Points given"><label for="pg"> Points given</label> </fieldset><div class="legend receiving">Receiving points</div><div class="legend giving">Giving points</div><div class="legend">darker = more points</div><fieldset> <input type="radio" id="sum" name="aggregation" value="sum" checked><label for="sum"> Sum</label><br> <input type="radio" id="avg" name="aggregation" value="avg"><label for="avg"> Average</label> <hr> </fieldset><fieldset> <input type="radio" id="full" name="voting" value="Televoting" checked><label for="full"> 2003-2015</label><br><input type="radio" id="tv" name="voting" value="Televoting"><label for="tv"> 2003-2009sf</label><br> <input type="radio" id="tvjur" name="voting" value="Televote/Jury" ><label for="tvjur"> 2009f-2015</label> <hr> <input type="checkbox" id="finalonly" name="types" value="finals only"><label for="finalonly"> finals only</label></fieldset>';
 
 		return div;
 	};
@@ -145,17 +272,26 @@
 
 	titlebar.addTo(map);
 	
+	
+	var sources = L.control.attribution({position: 'bottomright'});
+	sources.addAttribution('<a href="sources.html">Sources</a> | <a href="https://hszemi.de">hszemi.de</a>');
+
+	sources.addTo(map);
+	
 	$('#pr').click(function(){init_geojson(current_name);});
 	$('#pg').click(function(){init_geojson(current_name);});
 	$('#tv').click(function(){init_geojson(current_name);});
+	$('#full').click(function(){init_geojson(current_name);});
 	$('#tvjur').click(function(){init_geojson(current_name);});
 	$('#finalonly').click(function(){init_geojson(current_name);});
+	$('#sum').click(function(){init_geojson(current_name);});
+	$('#avg').click(function(){init_geojson(current_name);});
     }
     
     function init_geojson(n){
+	current_name = map2esc(n);
 	update_current_dataset();
 	map.removeLayer(geojson);
-	current_name = map2esc(n);
 	geojson = L.geoJson(data_geojson, {
 		clickable: true,
 		onEachFeature: onEachFeature,
@@ -180,8 +316,12 @@
 				};
 			} else if(current_name in current_dataset && name in current_dataset[current_name]){
 				var max = 0;
-				for(key in current_dataset[current_name]){
-					max = Math.max(current_dataset[current_name][key], max);
+				if($('#avg').prop("checked")){
+					max = 12;
+				} else {
+					for(key in current_dataset[current_name]){
+						max = Math.max(current_dataset[current_name][key], max);
+					}
 				}
 				
 				
@@ -220,9 +360,13 @@
 				};
 			} else if(name in current_dataset && current_name in current_dataset[name]){
 				var max = 0;
-				for(key in current_dataset){
-					if(current_name in current_dataset[key]){
-						max = Math.max(current_dataset[key][current_name], max);
+				if($('#avg').prop("checked")){
+					max = 12;
+				} else {
+					for(key in current_dataset){
+						if(current_name in current_dataset[key]){
+							max = Math.max(current_dataset[key][current_name], max);
+						}
 					}
 				}
 				
@@ -267,13 +411,21 @@
 		if(current_dataset != null && current_name != ""){
 			if($('#pg').prop("checked")){
 				if(current_name in current_dataset && name in current_dataset[current_name]){
-					text += " ("+current_dataset[current_name][name] + ')';
+					var number = current_dataset[current_name][name];
+					if($('#avg').prop("checked")){
+						number = Math.round( number * 10) / 10;
+					}
+					text += " ("+ number + ')';
 				}
 			} else {
 				var sum = 0;
 				if(name in current_dataset){
 					if(current_name in current_dataset[name]){
-						text += " ("+current_dataset[name][current_name]+ ')';
+						number = current_dataset[name][current_name];
+						if($('#avg').prop("checked")){
+							number = Math.round( number * 10) / 10;
+						}
+						text += " ("+number+')';
 					};
 				}
 			}
@@ -299,7 +451,11 @@
 		case 'Czech Rep.':
 			return 'Czech Republic';
 		case 'Bosnia and Herz.':
-			return 'Bosnia and Herzegovina';
+			return 'Bosnia & Herzegovina';
+		case 'Macedonia':
+			return 'F.Y.R. Macedonia';
+		case 'Netherlands':
+			return 'The Netherlands';
 	}
 	
 	return mapname;
@@ -310,10 +466,14 @@
 	switch(mapname){
 		case 'Czech Republic':
 			return 'Czech Rep.';
-		case 'Bosnia and Herzegovina':
+		case 'Bosnia & Herzegovina':
 			return 'Bosnia and Herz.';
 		case 'Serbia and Montenegro':
 			return ['Serbia', 'Montenegro'];
+		case 'F.Y.R. Macedonia':
+			return 'Macedonia';
+		case 'The Netherlands':
+			return 'Netherlands';
 	}
     }
     </script>

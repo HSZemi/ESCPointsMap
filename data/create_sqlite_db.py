@@ -14,34 +14,10 @@ def chart_from_result(result):
 			chart[country_from] = {}
 			
 		chart[country_from][country_to] = row[2]
-
-	#fix the problem with Serbia and Montenegro
-	
-	if('Serbia and Montenegro' in chart):
-		for country in chart['Serbia and Montenegro']:
-			if(country not in chart['Serbia']):
-				chart['Serbia'][country] = 0
-			if(country not in chart['Montenegro']):
-				chart['Montenegro'][country] = 0
-				
-			chart['Serbia'][country] += chart['Serbia and Montenegro'][country]
-			chart['Montenegro'][country] += chart['Serbia and Montenegro'][country]
-		del chart['Serbia and Montenegro']
-
-	for country in chart:
-		if('Serbia and Montenegro' in chart[country]):
-			if('Serbia' not in chart[country]):
-				chart[country]['Serbia'] = 0
-			if('Montenegro' not in chart[country]):
-				chart[country]['Montenegro'] = 0
-			
-			chart[country]['Serbia'] += chart[country]['Serbia and Montenegro']
-			chart[country]['Montenegro'] += chart[country]['Serbia and Montenegro']
-			del chart[country]['Serbia and Montenegro']
 	return chart
 
-#conn = sqlite3.connect('esc.db')
-conn = sqlite3.connect(':memory:')
+conn = sqlite3.connect('esc.db')
+#conn = sqlite3.connect(':memory:')
 
 cursor = conn.cursor()
 cursor.execute('CREATE TABLE events (ID INTEGER PRIMARY KEY, year INTEGER, name STRING, type TEXT)')
@@ -62,51 +38,110 @@ for f in os.listdir(os.getcwd()):
 			# get event id
 			for row in reader:
 				for country_from in row:
-					if(country_from not in ['To', 'Total Score'] and row[country_from] not in ['','–']):
-						cur.execute('INSERT INTO points(event, "from", "to", points) VALUES (?,?,?,?)', (event_id, country_from, row['To'], int(row[country_from])))
+					print(f, country_from)
+					print(row)
+					if(country_from not in ['Participant', 'Points', 'Place']):
+						points = 0
+						if(row[country_from] not in ['','–']):
+							points = int(row[country_from])
+						
+						#fix the problem with Serbia and Montenegro
+						if('Serbia and Montenegro' not in (country_from, row['Participant'])):
+							cur.execute('INSERT INTO points(event, "from", "to", points) VALUES (?,?,?,?)', (event_id, country_from, row['Participant'], points))
+						if(country_from == 'Serbia and Montenegro'):
+							cur.execute('INSERT INTO points(event, "from", "to", points) VALUES (?,?,?,?)', (event_id, 'Serbia', row['Participant'], points))
+							cur.execute('INSERT INTO points(event, "from", "to", points) VALUES (?,?,?,?)', (event_id, 'Montenegro', row['Participant'], points))
+						elif(row['Participant'] == 'Serbia and Montenegro'):
+							cur.execute('INSERT INTO points(event, "from", "to", points) VALUES (?,?,?,?)', (event_id, country_from, 'Serbia', points))
+							cur.execute('INSERT INTO points(event, "from", "to", points) VALUES (?,?,?,?)', (event_id, country_from, 'Montenegro', points))
+
 
 conn.commit()
 
+#SUM
 # all
-result = cursor.execute('SELECT "from", "to", sum(points) AS sum FROM points GROUP BY "to", "from"')
+result = cursor.execute('SELECT "from", "to", sum(points) AS sum FROM points WHERE points.points > 0 GROUP BY "to", "from"')
 chart = chart_from_result(result)
 
 with open("data_all.json", "w") as file:
 	print(json.dumps(chart), file=file)
 
 #televoting
-result = cursor.execute('SELECT "from", "to", sum(points) AS sum FROM points WHERE event in (SELECT ID FROM events WHERE year < 2009 UNION SELECT ID FROM events WHERE year = 2009 AND type = "semifinal" ) GROUP BY "to", "from"')
+result = cursor.execute('SELECT "from", "to", sum(points) AS sum FROM points WHERE points.points > 0 AND event in (SELECT ID FROM events WHERE year < 2009 UNION SELECT ID FROM events WHERE year = 2009 AND type = "semifinal" ) GROUP BY "to", "from"')
 chart = chart_from_result(result)
 
 with open("data_televote.json", "w") as file:
 	print(json.dumps(chart), file=file)
 	
 #50/50 Televoting / Jury
-result = cursor.execute('SELECT "from", "to", sum(points) AS sum FROM points WHERE event in (SELECT ID FROM events WHERE year > 2009 UNION SELECT ID FROM events WHERE year = 2009 AND type = "final" ) GROUP BY "to", "from"')
+result = cursor.execute('SELECT "from", "to", sum(points) AS sum FROM points WHERE points.points > 0 AND event in (SELECT ID FROM events WHERE year > 2009 UNION SELECT ID FROM events WHERE year = 2009 AND type = "final" ) GROUP BY "to", "from"')
 chart = chart_from_result(result)
 
 with open("data_5050.json", "w") as file:
 	print(json.dumps(chart), file=file)
 	
 # all - final only
-result = cursor.execute('SELECT "from", "to", sum(points) AS sum FROM points WHERE event IN (SELECT ID FROM events WHERE type = "final") GROUP BY "to", "from"')
+result = cursor.execute('SELECT "from", "to", sum(points) AS sum FROM points WHERE points.points > 0 AND event IN (SELECT ID FROM events WHERE type = "final") GROUP BY "to", "from"')
 chart = chart_from_result(result)
 
 with open("data_all_final.json", "w") as file:
 	print(json.dumps(chart), file=file)
 
 #televoting - final only
-result = cursor.execute('SELECT "from", "to", sum(points) AS sum FROM points WHERE event in (SELECT ID FROM events WHERE year < 2009 AND type = "final") GROUP BY "to", "from"')
+result = cursor.execute('SELECT "from", "to", sum(points) AS sum FROM points WHERE points.points > 0 AND event in (SELECT ID FROM events WHERE year < 2009 AND type = "final") GROUP BY "to", "from"')
 chart = chart_from_result(result)
 
 with open("data_televote_final.json", "w") as file:
 	print(json.dumps(chart), file=file)
 	
 #50/50 Televoting / Jury - final only
-result = cursor.execute('SELECT "from", "to", sum(points) AS sum FROM points WHERE event in (SELECT ID FROM events WHERE year >= 2009 AND type = "final" ) GROUP BY "to", "from"')
+result = cursor.execute('SELECT "from", "to", sum(points) AS sum FROM points WHERE points.points > 0 AND event in (SELECT ID FROM events WHERE year >= 2009 AND type = "final" ) GROUP BY "to", "from"')
 chart = chart_from_result(result)
 
 with open("data_5050_final.json", "w") as file:
+	print(json.dumps(chart), file=file)
+	
+#AVG
+# all
+result = cursor.execute('SELECT "from", "to", avg(points) AS avg FROM points GROUP BY "to", "from"')
+chart = chart_from_result(result)
+
+with open("data_all_avg.json", "w") as file:
+	print(json.dumps(chart), file=file)
+
+#televoting
+result = cursor.execute('SELECT "from", "to", avg(points) AS avg FROM points WHERE event in (SELECT ID FROM events WHERE year < 2009 UNION SELECT ID FROM events WHERE year = 2009 AND type = "semifinal" ) GROUP BY "to", "from"')
+chart = chart_from_result(result)
+
+with open("data_televote_avg.json", "w") as file:
+	print(json.dumps(chart), file=file)
+	
+#50/50 Televoting / Jury
+result = cursor.execute('SELECT "from", "to", avg(points) AS avg FROM points WHERE event in (SELECT ID FROM events WHERE year > 2009 UNION SELECT ID FROM events WHERE year = 2009 AND type = "final" ) GROUP BY "to", "from"')
+chart = chart_from_result(result)
+
+with open("data_5050_avg.json", "w") as file:
+	print(json.dumps(chart), file=file)
+	
+# all - final only
+result = cursor.execute('SELECT "from", "to", avg(points) AS avg FROM points WHERE event IN (SELECT ID FROM events WHERE type = "final") GROUP BY "to", "from"')
+chart = chart_from_result(result)
+
+with open("data_all_final_avg.json", "w") as file:
+	print(json.dumps(chart), file=file)
+
+#televoting - final only
+result = cursor.execute('SELECT "from", "to", avg(points) AS avg FROM points WHERE event in (SELECT ID FROM events WHERE year < 2009 AND type = "final") GROUP BY "to", "from"')
+chart = chart_from_result(result)
+
+with open("data_televote_final_avg.json", "w") as file:
+	print(json.dumps(chart), file=file)
+	
+#50/50 Televoting / Jury - final only
+result = cursor.execute('SELECT "from", "to", avg(points) AS avg FROM points WHERE event in (SELECT ID FROM events WHERE year >= 2009 AND type = "final" ) GROUP BY "to", "from"')
+chart = chart_from_result(result)
+
+with open("data_5050_final_avg.json", "w") as file:
 	print(json.dumps(chart), file=file)
 
 conn.close()
