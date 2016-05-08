@@ -5,65 +5,40 @@ import os
 import csv
 import json
 
-def charts_from_result(result):
-	chart_from = {}
-	chart_to = {}
+def chart_from_result(result):
+	chart = {}
 	for row in result:
 		country_from = row[0]
 		country_to = row[1]
-		if(country_from not in chart_from):
-			chart_from[country_from] = {}
-		if(country_to not in chart_to):
-			chart_to[country_to] = {}
+		if(country_from not in chart):
+			chart[country_from] = {}
 			
-		chart_from[country_from][country_to] = row[2]
-		chart_to[country_to][country_from] = row[2]
+		chart[country_from][country_to] = row[2]
 
 	#fix the problem with Serbia and Montenegro
-	if('Serbia and Montenegro' in chart_to):
-		for country in chart_to['Serbia and Montenegro']:
-			if(country not in chart_to['Serbia']):
-				chart_to['Serbia'][country] = 0
-			if(country not in chart_to['Montenegro']):
-				chart_to['Montenegro'][country] = 0
-				
-			chart_to['Serbia'][country] += chart_to['Serbia and Montenegro'][country]
-			chart_to['Montenegro'][country] += chart_to['Serbia and Montenegro'][country]
-		del chart_to['Serbia and Montenegro']
 	
-	if('Serbia and Montenegro' in chart_from):
-		for country in chart_from['Serbia and Montenegro']:
-			if(country not in chart_from['Serbia']):
-				chart_from['Serbia'][country] = 0
-			if(country not in chart_from['Montenegro']):
-				chart_from['Montenegro'][country] = 0
+	if('Serbia and Montenegro' in chart):
+		for country in chart['Serbia and Montenegro']:
+			if(country not in chart['Serbia']):
+				chart['Serbia'][country] = 0
+			if(country not in chart['Montenegro']):
+				chart['Montenegro'][country] = 0
 				
-			chart_from['Serbia'][country] += chart_from['Serbia and Montenegro'][country]
-			chart_from['Montenegro'][country] += chart_from['Serbia and Montenegro'][country]
-		del chart_from['Serbia and Montenegro']
+			chart['Serbia'][country] += chart['Serbia and Montenegro'][country]
+			chart['Montenegro'][country] += chart['Serbia and Montenegro'][country]
+		del chart['Serbia and Montenegro']
 
-	for country in chart_to:
-		if('Serbia and Montenegro' in chart_to[country]):
-			if('Serbia' not in chart_to[country]):
-				chart_to[country]['Serbia'] = 0
-			if('Montenegro' not in chart_to[country]):
-				chart_to[country]['Montenegro'] = 0
+	for country in chart:
+		if('Serbia and Montenegro' in chart[country]):
+			if('Serbia' not in chart[country]):
+				chart[country]['Serbia'] = 0
+			if('Montenegro' not in chart[country]):
+				chart[country]['Montenegro'] = 0
 			
-			chart_to[country]['Serbia'] += chart_to[country]['Serbia and Montenegro']
-			chart_to[country]['Montenegro'] += chart_to[country]['Serbia and Montenegro']
-			del chart_to[country]['Serbia and Montenegro']
-			
-	for country in chart_from:
-		if('Serbia and Montenegro' in chart_from[country]):
-			if('Serbia' not in chart_from[country]):
-				chart_from[country]['Serbia'] = 0
-			if('Montenegro' not in chart_from[country]):
-				chart_from[country]['Montenegro'] = 0
-			
-			chart_from[country]['Serbia'] += chart_from[country]['Serbia and Montenegro']
-			chart_from[country]['Montenegro'] += chart_from[country]['Serbia and Montenegro']
-			del chart_from[country]['Serbia and Montenegro']
-	return (chart_from, chart_to)
+			chart[country]['Serbia'] += chart[country]['Serbia and Montenegro']
+			chart[country]['Montenegro'] += chart[country]['Serbia and Montenegro']
+			del chart[country]['Serbia and Montenegro']
+	return chart
 
 #conn = sqlite3.connect('esc.db')
 conn = sqlite3.connect(':memory:')
@@ -94,26 +69,44 @@ conn.commit()
 
 # all
 result = cursor.execute('SELECT "from", "to", sum(points) AS sum FROM points GROUP BY "to", "from"')
-chart_from, chart_to = charts_from_result(result)
+chart = chart_from_result(result)
 
-with open("data_all_from.json", "w") as file_from, open("data_all_to.json", "w") as file_to:
-	print(json.dumps(chart_from), file=file_from)
-	print(json.dumps(chart_to), file=file_to)
+with open("data_all.json", "w") as file:
+	print(json.dumps(chart), file=file)
 
 #televoting
 result = cursor.execute('SELECT "from", "to", sum(points) AS sum FROM points WHERE event in (SELECT ID FROM events WHERE year < 2009 UNION SELECT ID FROM events WHERE year = 2009 AND type = "semifinal" ) GROUP BY "to", "from"')
-chart_from, chart_to = charts_from_result(result)
+chart = chart_from_result(result)
 
-with open("data_televote_from.json", "w") as file_from, open("data_televote_to.json", "w") as file_to:
-	print(json.dumps(chart_from), file=file_from)
-	print(json.dumps(chart_to), file=file_to)
+with open("data_televote.json", "w") as file:
+	print(json.dumps(chart), file=file)
 	
 #50/50 Televoting / Jury
 result = cursor.execute('SELECT "from", "to", sum(points) AS sum FROM points WHERE event in (SELECT ID FROM events WHERE year > 2009 UNION SELECT ID FROM events WHERE year = 2009 AND type = "final" ) GROUP BY "to", "from"')
-chart_from, chart_to = charts_from_result(result)
+chart = chart_from_result(result)
 
-with open("data_5050_from.json", "w") as file_from, open("data_5050_to.json", "w") as file_to:
-	print(json.dumps(chart_from), file=file_from)
-	print(json.dumps(chart_to), file=file_to)
+with open("data_5050.json", "w") as file:
+	print(json.dumps(chart), file=file)
+	
+# all - final only
+result = cursor.execute('SELECT "from", "to", sum(points) AS sum FROM points WHERE event IN (SELECT ID FROM events WHERE type = "final") GROUP BY "to", "from"')
+chart = chart_from_result(result)
+
+with open("data_all_final.json", "w") as file:
+	print(json.dumps(chart), file=file)
+
+#televoting - final only
+result = cursor.execute('SELECT "from", "to", sum(points) AS sum FROM points WHERE event in (SELECT ID FROM events WHERE year < 2009 AND type = "final") GROUP BY "to", "from"')
+chart = chart_from_result(result)
+
+with open("data_televote_final.json", "w") as file:
+	print(json.dumps(chart), file=file)
+	
+#50/50 Televoting / Jury - final only
+result = cursor.execute('SELECT "from", "to", sum(points) AS sum FROM points WHERE event in (SELECT ID FROM events WHERE year >= 2009 AND type = "final" ) GROUP BY "to", "from"')
+chart = chart_from_result(result)
+
+with open("data_5050_final.json", "w") as file:
+	print(json.dumps(chart), file=file)
 
 conn.close()

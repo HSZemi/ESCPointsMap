@@ -30,6 +30,9 @@
 		color: white;
 		font-weight: bold;
 	}
+	hr{color: #ccc;border: 1px solid #ccc;}
+	.titlebar{background-color: rgba(255,255,255,0.5); padding: 0.5em;border-radius: 3px;}
+	.titlebar h1{ margin: 0em; color: #333;}
     </style>
 </head>
 
@@ -40,8 +43,8 @@
     <script src="http://code.jquery.com/jquery-1.10.2.min.js"></script>
     <script src="http://cdn.leafletjs.com/leaflet-0.7.1/leaflet.js"></script>
     <script>
-    var map, geojson, currentname="", current_dataset = null;
-    var data_all_from, data_televote_from, data_5050_from, data_all_to, data_televote_to, data_5050_to, data_geojson;
+    var map, geojson, current_name="", current_dataset = null, current_method = 'from';
+    var data_all, data_televote, data_5050, data_all_final, data_televote_final, data_5050_final, data_geojson;
     
     var myCustomStyle = {
 	stroke: true,
@@ -60,31 +63,24 @@
 	$.when(
 		$.getJSON('data/custom.geo.json',function(data){
 			data_geojson = data;
-			console.log('data/custom.geo.json');
 		}),
-		$.getJSON('data/data_all_from.json',function(data){
-			data_all_from = data;
-			console.log('data/data_all_from.json');
+		$.getJSON('data/data_all.json',function(data){
+			data_all = data;
 		}),
-		$.getJSON('data/data_all_to.json',function(data){
-			data_all_to = data;
-			console.log('data/data_all_to.json');
+		$.getJSON('data/data_all_final.json',function(data){
+			data_all_final = data;
 		}),
-		$.getJSON('data/data_televote_from.json',function(data){
-			data_televote_from = data;
-			console.log('data/data_televote_from.json');
+		$.getJSON('data/data_televote.json',function(data){
+			data_televote = data;
 		}),
-		$.getJSON('data/data_televote_to.json',function(data){
-			data_televote_to = data;
-			console.log('data/data_televote_to.json');
+		$.getJSON('data/data_televote_final.json',function(data){
+			data_televote_final = data;
 		}),
-		$.getJSON('data/data_5050_from.json',function(data){
-			data_5050_from = data;
-			console.log('data/data_5050_from.json');
+		$.getJSON('data/data_5050.json',function(data){
+			data_5050 = data;
 		}),
-		$.getJSON('data/data_5050_to.json',function(data){
-			data_5050_to = data;
-			console.log('data/data_5050_to.json');
+		$.getJSON('data/data_5050_final.json',function(data){
+			data_5050_final = data;
 		})
 	).then(function(){
 			init_map();
@@ -94,30 +90,29 @@
     }
     
     function update_current_dataset(){
-	current_dataset = data_all_to;
-	if($('#pr').prop("checked")){
-		if($('#tv').prop("checked")){
-			current_dataset = data_televote_to;
-		}
-		if($('#tvjur').prop("checked")){
-			current_dataset = data_5050_to;
-		}
-		if($('#tv').prop("checked") && $('#tvjur').prop("checked")){
-			current_dataset = data_all_to;
+	current_dataset = data_all;
+	if($('#tv').prop("checked")){
+		if($('#finalonly').prop("checked")){
+			current_dataset = data_televote_final;
+		} else {
+			current_dataset = data_televote;
 		}
 	}
-	if($('#pg').prop("checked")){
-		current_dataset = data_all_from;
-		if($('#tv').prop("checked")){
-			current_dataset = data_televote_from;
-		}
-		if($('#tvjur').prop("checked")){
-			current_dataset = data_5050_from;
-		}
-		if($('#tv').prop("checked") && $('#tvjur').prop("checked")){
-			current_dataset = data_all_from;
+	if($('#tvjur').prop("checked")){
+		if($('#finalonly').prop("checked")){
+			current_dataset = data_5050_final;
+		} else {
+			current_dataset = data_5050;
 		}
 	}
+	if($('#tv').prop("checked") && $('#tvjur').prop("checked")){
+		if($('#finalonly').prop("checked")){
+			current_dataset = data_all_final;
+		} else {
+			current_dataset = data_all;
+		}
+	}
+
     }
     
     function init_map(){	
@@ -133,23 +128,34 @@
 	var legend = L.control({position: 'topright'});
 	legend.onAdd = function (map) {
 		var div = L.DomUtil.create('div', 'controls');
-		div.innerHTML += '<fieldset> <input type="radio" id="pr" name="method" value="Points received" checked><label for="pr"> Points received</label><br> <input type="radio" id="pg" name="method" value="Points given"><label for="pg"> Points given</label> </fieldset><div class="legend receiving">Receiving points</div><div class="legend giving">Giving points</div><div class="legend">darker = more points</div><fieldset> <input type="checkbox" id="tv" name="voting" value="Televoting" checked><label for="tv"> 2003-2009sf</label><br> <input type="checkbox" id="tvjur" name="voting" value="Televote/Jury"><label for="tvjur"> 2009f-2015</label> </fieldset>';
+		div.innerHTML += '<fieldset> <input type="radio" id="pr" name="method" value="Points received" checked><label for="pr"> Points received</label><br> <input type="radio" id="pg" name="method" value="Points given"><label for="pg"> Points given</label> </fieldset><div class="legend receiving">Receiving points</div><div class="legend giving">Giving points</div><div class="legend">darker = more points</div><fieldset> <input type="checkbox" id="tv" name="voting" value="Televoting" checked><label for="tv"> 2003-2009sf</label><br> <input type="checkbox" id="tvjur" name="voting" value="Televote/Jury" checked><label for="tvjur"> 2009f-2015</label> <hr> <input type="checkbox" id="finalonly" name="types" value="finals only"><label for="finalonly"> finals only</label></fieldset>';
 
 		return div;
 	};
 
 	legend.addTo(map);
 	
-	$('#pr').click(function(){init_geojson(currentname);});
-	$('#pg').click(function(){init_geojson(currentname);});
-	$('#tv').click(function(){init_geojson(currentname);});
-	$('#tvjur').click(function(){init_geojson(currentname);});
+	var titlebar = L.control({position: 'bottomleft'});
+	titlebar.onAdd = function (map) {
+		var div = L.DomUtil.create('div', 'titlebar');
+		div.innerHTML += '<h1>ESC participating countries: Points received and points given</h1>';
+
+		return div;
+	};
+
+	titlebar.addTo(map);
+	
+	$('#pr').click(function(){init_geojson(current_name);});
+	$('#pg').click(function(){init_geojson(current_name);});
+	$('#tv').click(function(){init_geojson(current_name);});
+	$('#tvjur').click(function(){init_geojson(current_name);});
+	$('#finalonly').click(function(){init_geojson(current_name);});
     }
     
     function init_geojson(n){
 	update_current_dataset();
 	map.removeLayer(geojson);
-	currentname = map2esc(n);
+	current_name = map2esc(n);
 	geojson = L.geoJson(data_geojson, {
 		clickable: true,
 		onEachFeature: onEachFeature,
@@ -160,52 +166,86 @@
     function style(feature){
 	var name = map2esc(feature.properties.name);
 	
-	if(name in data_all_from){ // country is a esc country (we have to check data_from here!)
-		if(currentname == name){
-			fillcolor = '#111';
-			if($('#pr').prop("checked")){
-				fillcolor = '#0c0';
-			} else if($('#pg').prop("checked")){
+	if(name in data_all){ // country is a esc country (we have to check data_all_from here!)
+		if($('#pg').prop("checked")){
+			if(current_name == name){
 				fillcolor = '#c00';
+				return {
+					stroke: true,
+					weight: 1,
+					color: '#000',
+					fill: true,
+					fillColor: fillcolor,
+					fillOpacity: 1
+				};
+			} else if(current_name in current_dataset && name in current_dataset[current_name]){
+				var max = 0;
+				for(key in current_dataset[current_name]){
+					max = Math.max(current_dataset[current_name][key], max);
+				}
+				
+				
+				var fillcolor = 'rgb('+(255-Math.floor(current_dataset[current_name][name] / max * 255))+',255,'+(255-Math.floor(current_dataset[current_name][name] / max * 255))+')';
+
+				
+				return {
+					stroke: true,
+					weight: 1,
+					color: '#000',
+					fill: true,
+					fillColor: fillcolor,
+					fillOpacity: 1
+				};
+			} else { 
+				return {
+					stroke: true,
+					weight: 1,
+					color: '#000',
+					fill: true,
+					fillColor: '#ddd',
+					fillOpacity: 1
+				};
 			}
-			return {
-				stroke: true,
-				weight: 1,
-				color: '#000',
-				fill: true,
-				fillColor: fillcolor,
-				fillOpacity: 1
-			};
-		} else if(currentname in current_dataset && name in current_dataset[currentname]){
-			max = 0;
-			for(key in current_dataset[currentname]){
-				max = Math.max(current_dataset[currentname][key], max);
+		} else { // current_method = 'to'
+			if(current_name == name){
+				fillcolor = '#0c0';
+				
+				return {
+					stroke: true,
+					weight: 1,
+					color: '#000',
+					fill: true,
+					fillColor: fillcolor,
+					fillOpacity: 1
+				};
+			} else if(name in current_dataset && current_name in current_dataset[name]){
+				var max = 0;
+				for(key in current_dataset){
+					if(current_name in current_dataset[key]){
+						max = Math.max(current_dataset[key][current_name], max);
+					}
+				}
+				
+				var fillcolor = 'rgb(255,'+(255-Math.floor(current_dataset[name][current_name] / max * 255))+','+(255-Math.floor(current_dataset[name][current_name] / max * 255))+')';
+				
+				return {
+					stroke: true,
+					weight: 1,
+					color: '#000',
+					fill: true,
+					fillColor: fillcolor,
+					fillOpacity: 1
+				};
+			} else { 
+				return {
+					stroke: true,
+					weight: 1,
+					color: '#000',
+					fill: true,
+					fillColor: '#ddd',
+					fillOpacity: 1
+				};
 			}
-			
-			fillcolor = '#000';
-			if($('#pr').prop("checked")){
-				fillcolor = 'rgb(255,'+(255-Math.floor(current_dataset[currentname][name] / max * 255))+','+(255-Math.floor(current_dataset[currentname][name] / max * 255))+')';
-			} else if($('#pg').prop("checked")){
-				fillcolor = 'rgb('+(255-Math.floor(current_dataset[currentname][name] / max * 255))+',255,'+(255-Math.floor(current_dataset[currentname][name] / max * 255))+')';
-			}
-			
-			return {
-				stroke: true,
-				weight: 1,
-				color: '#000',
-				fill: true,
-				fillColor: fillcolor,
-				fillOpacity: 1
-			};
-		} else { 
-			return {
-				stroke: true,
-				weight: 1,
-				color: '#000',
-				fill: true,
-				fillColor: '#ddd',
-				fillOpacity: 1
-			};
 		}
 	} else { //not a esc country
 		return {
@@ -224,9 +264,18 @@
 	layer.on('mouseover', function(e){
 		var name = map2esc(feature.properties.name);
 		var text = name;
-		if(current_dataset != null && currentname != ""){
-			if(currentname in current_dataset && name in current_dataset[currentname]){
-				text += " ("+current_dataset[currentname][name] + ')';
+		if(current_dataset != null && current_name != ""){
+			if($('#pg').prop("checked")){
+				if(current_name in current_dataset && name in current_dataset[current_name]){
+					text += " ("+current_dataset[current_name][name] + ')';
+				}
+			} else {
+				var sum = 0;
+				if(name in current_dataset){
+					if(current_name in current_dataset[name]){
+						text += " ("+current_dataset[name][current_name]+ ')';
+					};
+				}
 			}
 		}
 		$('#besideMouse').text(text);
